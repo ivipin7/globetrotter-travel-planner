@@ -18,13 +18,14 @@ import {
   Plus,
   Loader2,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WeatherWidget } from "@/components/weather/WeatherWidget";
-import { cityApi, City } from "@/lib/api";
+import { cityApi, aiApi, City } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 function CostIndicator({ level }: { level: number }) {
@@ -47,41 +48,27 @@ const costLabels: Record<number, string> = {
   4: "Luxury",
 };
 
-// Mock data for activities (in real app, this would come from API)
-const getActivities = (cityName: string) => [
-  {
-    id: 1,
-    name: `${cityName} City Tour`,
-    type: "Tour",
-    duration: "4 hours",
-    price: "₹2,500",
-    rating: 4.8,
-  },
-  {
-    id: 2,
-    name: "Local Food Experience",
-    type: "Food",
-    duration: "3 hours",
-    price: "₹1,800",
-    rating: 4.9,
-  },
-  {
-    id: 3,
-    name: "Cultural Heritage Walk",
-    type: "Culture",
-    duration: "2 hours",
-    price: "₹1,200",
-    rating: 4.7,
-  },
-  {
-    id: 4,
-    name: "Photography Tour",
-    type: "Adventure",
-    duration: "5 hours",
-    price: "₹3,000",
-    rating: 4.6,
-  },
-];
+// Interface for AI-generated destination details
+interface DestinationPageDetails {
+  activities: {
+    name: string;
+    type: string;
+    duration: string;
+    price: string;
+    rating: number;
+    description: string;
+  }[];
+  travelInfo: {
+    gettingThere: string;
+    whereToStay: string;
+    foodDining: string;
+    mustSeeSpots: string;
+  };
+  tips: {
+    title: string;
+    description: string;
+  }[];
+}
 
 export default function DestinationDetail() {
   const { id } = useParams<{ id: string }>();
@@ -92,6 +79,10 @@ export default function DestinationDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  
+  // AI-generated content state
+  const [aiDetails, setAiDetails] = useState<DestinationPageDetails | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     const fetchCity = async () => {
@@ -101,6 +92,22 @@ export default function DestinationDetail() {
       try {
         const data = await cityApi.getById(id);
         setCity(data);
+        
+        // Fetch AI-generated details for this destination
+        if (data.name && data.country) {
+          setAiLoading(true);
+          try {
+            const aiResponse = await aiApi.getDestinationDetails(data.name, data.country);
+            if (aiResponse.success) {
+              setAiDetails(aiResponse.data);
+            }
+          } catch (aiErr) {
+            console.error("Error fetching AI details:", aiErr);
+            // Non-blocking - show fallback content
+          } finally {
+            setAiLoading(false);
+          }
+        }
       } catch (err) {
         console.error("Error fetching city:", err);
         setError("Failed to load destination details");
@@ -178,7 +185,7 @@ export default function DestinationDetail() {
     );
   }
 
-  const activities = getActivities(city.name);
+  const activities = aiDetails?.activities || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -328,143 +335,174 @@ export default function DestinationDetail() {
           </TabsList>
           
           <TabsContent value="activities" className="mt-6">
-            <div className="grid md:grid-cols-2 gap-4">
-              {activities.map((activity) => (
-                <Card key={activity.id} className="card-3d hover:scale-[1.02] transition-transform">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className="font-medium">{activity.name}</h3>
-                        <p className="text-sm text-muted-foreground">{activity.type} • {activity.duration}</p>
-                      </div>
-                      <Badge variant="outline">{activity.price}</Badge>
-                    </div>
-                    <div className="flex items-center gap-1 text-sm">
-                      <Star className="h-4 w-4 text-accent fill-accent" />
-                      <span className="font-medium">{activity.rating}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {aiLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                <span className="text-muted-foreground">Loading AI-powered activities...</span>
+              </div>
+            ) : activities.length > 0 ? (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-sm text-muted-foreground">AI-generated activities for {city.name}</span>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {activities.map((activity, index) => (
+                    <Card key={index} className="card-3d hover:scale-[1.02] transition-transform">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className="font-medium">{activity.name}</h3>
+                            <p className="text-sm text-muted-foreground">{activity.type} • {activity.duration}</p>
+                          </div>
+                          <Badge variant="outline">{activity.price}</Badge>
+                        </div>
+                        {activity.description && (
+                          <p className="text-sm text-muted-foreground mb-2">{activity.description}</p>
+                        )}
+                        <div className="flex items-center gap-1 text-sm">
+                          <Star className="h-4 w-4 text-accent fill-accent" />
+                          <span className="font-medium">{activity.rating}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No activities found. Try refreshing the page.</p>
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="travel" className="mt-6">
-            <div className="grid md:grid-cols-2 gap-4">
-              <Card className="card-3d">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Plane className="h-4 w-4 text-primary" />
-                    Getting There
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Major airlines fly to {city.name}. Book 2-3 months in advance for best prices.
-                    Average flight time varies by origin.
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card className="card-3d">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Hotel className="h-4 w-4 text-primary" />
-                    Where to Stay
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Options range from budget hostels (₹1,500/night) to luxury hotels (₹15,000+/night).
-                    Central areas offer best access to attractions.
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card className="card-3d">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Utensils className="h-4 w-4 text-primary" />
-                    Food & Dining
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Local cuisine is a must-try. Street food from ₹100, restaurants ₹500-2,000 per meal.
-                    Vegetarian options widely available.
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card className="card-3d">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Camera className="h-4 w-4 text-primary" />
-                    Must-See Spots
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Popular attractions fill up quickly. Book tickets online when possible.
-                    Early mornings are best for photos with fewer crowds.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+            {aiLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                <span className="text-muted-foreground">Loading travel info...</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-sm text-muted-foreground">AI-generated travel info for {city.name}</span>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <Card className="card-3d">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Plane className="h-4 w-4 text-primary" />
+                        Getting There
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        {aiDetails?.travelInfo?.gettingThere || `Check flights and trains to ${city.name}.`}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="card-3d">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Hotel className="h-4 w-4 text-primary" />
+                        Where to Stay
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        {aiDetails?.travelInfo?.whereToStay || `Various hotels and guesthouses available in ${city.name}.`}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="card-3d">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Utensils className="h-4 w-4 text-primary" />
+                        Food & Dining
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        {aiDetails?.travelInfo?.foodDining || `Explore local restaurants and street food in ${city.name}.`}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="card-3d">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Camera className="h-4 w-4 text-primary" />
+                        Must-See Spots
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        {aiDetails?.travelInfo?.mustSeeSpots || `Visit popular attractions and landmarks in ${city.name}.`}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
+            )}
           </TabsContent>
           
           <TabsContent value="tips" className="mt-6">
-            <Card className="card-3d">
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-xs font-bold text-primary">1</span>
+            {aiLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                <span className="text-muted-foreground">Loading travel tips...</span>
+              </div>
+            ) : (
+              <Card className="card-3d">
+                <CardContent className="p-6 space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-muted-foreground">AI-generated tips for {city.name}</span>
                   </div>
-                  <div>
-                    <h4 className="font-medium">Best Time to Visit</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Research the weather patterns. Shoulder seasons often offer the best combination of good weather and fewer tourists.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-xs font-bold text-primary">2</span>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Local Currency</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Have some local currency on hand for small purchases. Most tourist areas accept cards, but cash is useful for markets.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-xs font-bold text-primary">3</span>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Cultural Etiquette</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Learn basic local phrases and customs. Respectful behavior opens doors to authentic experiences.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-xs font-bold text-primary">4</span>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Stay Connected</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Get a local SIM card or international roaming plan. Having maps and translation apps offline helps navigate easily.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                  {aiDetails?.tips && aiDetails.tips.length > 0 ? (
+                    aiDetails.tips.map((tip, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="text-xs font-bold text-primary">{index + 1}</span>
+                        </div>
+                        <div>
+                          <h4 className="font-medium">{tip.title}</h4>
+                          <p className="text-sm text-muted-foreground">{tip.description}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="text-xs font-bold text-primary">1</span>
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Best Time to Visit</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {city.bestTimeToVisit || 'Research the weather patterns for the best travel experience.'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="text-xs font-bold text-primary">2</span>
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Local Currency</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Have Indian Rupees (₹) ready for local purchases. Cards accepted at most tourist spots.
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
 

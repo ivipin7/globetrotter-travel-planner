@@ -243,6 +243,8 @@ export interface DestinationInsights {
 export async function getDestinationRecommendations(destination: string): Promise<DestinationInsights> {
   const prompt = `You are a travel expert AI. Provide detailed travel recommendations for "${destination}".
 
+IMPORTANT: All budget/cost values MUST be in Indian Rupees (INR/₹). Use realistic INR prices.
+
 Return a JSON object with this exact structure (no markdown, just pure JSON):
 {
   "destination": "City/Place Name",
@@ -253,7 +255,7 @@ Return a JSON object with this exact structure (no markdown, just pure JSON):
       "area": "Area/Neighborhood Name",
       "description": "Brief description",
       "highlights": ["Attraction 1", "Attraction 2", "Attraction 3"],
-      "estimatedBudget": { "min": 50, "max": 150, "currency": "USD" },
+      "estimatedBudget": { "min": 4000, "max": 12000, "currency": "INR" },
       "estimatedDays": { "min": 1, "recommended": 2 },
       "bestTimeToVisit": ["Month1", "Month2"],
       "travelTips": ["Tip 1", "Tip 2"],
@@ -261,15 +263,15 @@ Return a JSON object with this exact structure (no markdown, just pure JSON):
     }
   ],
   "recommendedDuration": { "minimum": 3, "recommended": 5, "ideal": 7 },
-  "estimatedDailyBudget": { "budget": 50, "moderate": 100, "luxury": 250, "currency": "USD" },
+  "estimatedDailyBudget": { "budget": 3000, "moderate": 8000, "luxury": 20000, "currency": "INR" },
   "bestMonthsToVisit": ["Month1", "Month2", "Month3"],
   "weatherInfo": "Brief weather description",
   "localTips": ["Tip 1", "Tip 2", "Tip 3"],
   "safetyInfo": "Brief safety information",
-  "visaInfo": "Brief visa requirements for common nationalities"
+  "visaInfo": "Brief visa requirements for Indian passport holders"
 }
 
-Provide 3-5 areas to explore. Use realistic budget estimates in local currency or USD. Be specific and helpful.`;
+Provide 3-5 areas to explore. Use realistic budget estimates in INR (Indian Rupees). Be specific and helpful for this exact destination.`;
 
   try {
     const response = await callGemini(prompt);
@@ -543,6 +545,113 @@ Be accurate and realistic. If unsure about a small town, give moderate scores.`;
       tags: ['Explore', 'Travel'],
       highlights: [],
       bestTimeToVisit: 'Year-round'
+    };
+  }
+}
+
+// ============================================
+// DESTINATION PAGE DETAILS (Activities, Travel Info, Tips)
+// ============================================
+
+export interface DestinationPageDetails {
+  activities: {
+    name: string;
+    type: string;
+    duration: string;
+    price: string;
+    rating: number;
+    description: string;
+  }[];
+  travelInfo: {
+    gettingThere: string;
+    whereToStay: string;
+    foodDining: string;
+    mustSeeSpots: string;
+  };
+  tips: {
+    title: string;
+    description: string;
+  }[];
+}
+
+/**
+ * Generate destination-specific activities, travel info, and tips
+ * Called when viewing destination detail page
+ */
+export async function generateDestinationPageDetails(
+  cityName: string,
+  country: string
+): Promise<DestinationPageDetails> {
+  const prompt = `You are a travel expert. Generate specific, accurate travel details for ${cityName}, ${country}.
+
+IMPORTANT: All prices MUST be in Indian Rupees (₹). Be specific to this exact destination.
+
+Return ONLY a valid JSON object (no markdown):
+{
+  "activities": [
+    {
+      "name": "Specific activity name for ${cityName}",
+      "type": "Tour|Food|Culture|Adventure|Nature|Shopping|Religious",
+      "duration": "X hours",
+      "price": "₹X,XXX",
+      "rating": 4.5,
+      "description": "Brief description of this specific activity"
+    }
+  ],
+  "travelInfo": {
+    "gettingThere": "Specific info about getting to ${cityName} - nearest airport, train station, bus routes",
+    "whereToStay": "Specific areas/neighborhoods to stay in ${cityName} with price ranges in ₹",
+    "foodDining": "Famous local dishes and food spots specific to ${cityName} with prices in ₹",
+    "mustSeeSpots": "Top 3-4 specific attractions in ${cityName}"
+  },
+  "tips": [
+    {
+      "title": "Tip title",
+      "description": "Specific tip for visiting ${cityName}"
+    }
+  ]
+}
+
+Provide exactly 4 activities with realistic INR prices.
+Provide exactly 4 tips specific to ${cityName}.
+Be accurate and specific to ${cityName}, ${country}. Do not give generic travel advice.`;
+
+  try {
+    const response = await callGemini(prompt);
+    const details = parseJsonFromResponse(response);
+    
+    return {
+      activities: Array.isArray(details.activities) ? details.activities.slice(0, 4).map((a: any) => ({
+        name: String(a.name || 'Activity'),
+        type: String(a.type || 'Tour'),
+        duration: String(a.duration || '2 hours'),
+        price: String(a.price || '₹1,500'),
+        rating: Math.min(5, Math.max(3, Number(a.rating) || 4.5)),
+        description: String(a.description || '')
+      })) : [],
+      travelInfo: {
+        gettingThere: String(details.travelInfo?.gettingThere || `Reach ${cityName} by air, rail, or road.`),
+        whereToStay: String(details.travelInfo?.whereToStay || `Various accommodation options available in ${cityName}.`),
+        foodDining: String(details.travelInfo?.foodDining || `Try local cuisine in ${cityName}.`),
+        mustSeeSpots: String(details.travelInfo?.mustSeeSpots || `Explore the main attractions of ${cityName}.`)
+      },
+      tips: Array.isArray(details.tips) ? details.tips.slice(0, 4).map((t: any) => ({
+        title: String(t.title || 'Travel Tip'),
+        description: String(t.description || '')
+      })) : []
+    };
+  } catch (error) {
+    console.error('Error generating destination page details:', error);
+    // Return minimal defaults
+    return {
+      activities: [],
+      travelInfo: {
+        gettingThere: `Check flights and trains to ${cityName}.`,
+        whereToStay: `Various hotels and guesthouses available.`,
+        foodDining: `Explore local restaurants and street food.`,
+        mustSeeSpots: `Visit popular attractions and landmarks.`
+      },
+      tips: []
     };
   }
 }

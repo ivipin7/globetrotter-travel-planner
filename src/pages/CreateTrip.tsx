@@ -13,6 +13,8 @@ import {
   Loader2,
   Clock,
   AlertTriangle,
+  Upload,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ItineraryBuilder } from "@/components/premium/ItineraryBuilder";
-import { tripApi } from "@/lib/api";
+import { tripApi, uploadApi } from "@/lib/api";
 import { useAIRecommendations } from "@/hooks/use-ai-recommendations";
 import { AIRecommendationsCard, BudgetSuggestion, DurationSuggestion } from "@/components/ai/AIRecommendations";
 import { TripPossibilityGauge, TripPossibilityBadge } from "@/components/trip/TripPossibilityGauge";
@@ -57,6 +59,8 @@ export default function CreateTrip() {
   const [draftId, setDraftId] = useState<string | null>(editId || null);
   const [lastAutoSaved, setLastAutoSaved] = useState<Date | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   
   const [tripData, setTripData] = useState<TripFormData>({
     name: "",
@@ -241,6 +245,20 @@ export default function CreateTrip() {
     alert(`Applied "${optimizedTrip.name}" - Trip feasibility improved to ${optimizedTrip.possibility.percentage}%!`);
   }, []);
 
+  // Memoize date objects to prevent infinite re-renders
+  const startDateObj = useMemo(() => 
+    tripData.startDate ? new Date(tripData.startDate) : undefined, 
+    [tripData.startDate]
+  );
+  const endDateObj = useMemo(() => 
+    tripData.endDate ? new Date(tripData.endDate) : undefined, 
+    [tripData.endDate]
+  );
+  const budgetNum = useMemo(() => 
+    tripData.budget ? parseFloat(tripData.budget) : 0, 
+    [tripData.budget]
+  );
+
   // AI Recommendations
   const {
     recommendations,
@@ -253,9 +271,9 @@ export default function CreateTrip() {
     aiInsights
   } = useAIRecommendations({
     destination: tripData.destination,
-    startDate: tripData.startDate ? new Date(tripData.startDate) : undefined,
-    endDate: tripData.endDate ? new Date(tripData.endDate) : undefined,
-    budget: tripData.budget ? parseFloat(tripData.budget) : 0,
+    startDate: startDateObj,
+    endDate: endDateObj,
+    budget: budgetNum,
     plannedActivities: 0 // Will be updated when itinerary is built
   });
 
@@ -282,6 +300,46 @@ export default function CreateTrip() {
         ...tripData,
         endDate: end.toISOString().split('T')[0]
       });
+    }
+  };
+
+  // Handle image file upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Please upload a valid image file (JPEG, PNG, GIF, or WebP)');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB');
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      setError(null);
+      const result = await uploadApi.uploadTripCover(file);
+      // Use full URL for the uploaded image
+      const imageUrl = `http://localhost:5000${result.data.url}`;
+      setTripData({ ...tripData, coverImage: imageUrl });
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Handle remove image
+  const handleRemoveImage = () => {
+    setTripData({ ...tripData, coverImage: '' });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -612,28 +670,71 @@ export default function CreateTrip() {
                     )}
                   </div>
 
-                  {/* Cover Image */}
+                  {/* Cover Image Upload */}
                   <div className="space-y-2">
-                    <Label htmlFor="coverImage" className="text-base font-medium">
+                    <Label className="text-base font-medium">
                       <Image className="h-4 w-4 inline mr-2" />
-                      Cover Image URL
+                      Cover Image
                     </Label>
-                    <Input
-                      id="coverImage"
-                      placeholder="https://..."
-                      className="h-12"
-                      value={tripData.coverImage}
-                      onChange={(e) =>
-                        setTripData({ ...tripData, coverImage: e.target.value })
-                      }
+                    
+                    {/* Hidden file input */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="coverImageUpload"
                     />
-                    {tripData.coverImage && (
-                      <div className="mt-2 rounded-lg overflow-hidden h-40">
+                    
+                    {!tripData.coverImage ? (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all h-40"
+                      >
+                        {uploadingImage ? (
+                          <>
+                            <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
+                            <span className="text-sm text-muted-foreground">Uploading image...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                            <span className="text-sm font-medium">Click to upload cover image</span>
+                            <span className="text-xs text-muted-foreground mt-1">
+                              JPEG, PNG, GIF, or WebP (max 5MB)
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="relative rounded-lg overflow-hidden h-40 group">
                         <img
                           src={tripData.coverImage}
                           alt="Cover preview"
                           className="w-full h-full object-cover"
                         />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploadingImage}
+                          >
+                            {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
+                            Change
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleRemoveImage}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Remove
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>

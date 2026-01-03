@@ -10,6 +10,7 @@ import cityRoutes from './routes/city.routes';
 import itineraryRoutes from './routes/itinerary.routes';
 import packingRoutes from './routes/packing.routes';
 import aiRoutes from './routes/ai.routes';
+import uploadRoutes from './routes/upload.routes';
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
@@ -35,6 +36,9 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Test route
 app.get('/api', (req, res) => {
@@ -62,6 +66,7 @@ app.use('/api/cities', cityRoutes);
 app.use('/api/itinerary', itineraryRoutes);
 app.use('/api/packing', packingRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/upload', uploadRoutes);
 // app.use('/api/activities', activityRoutes);
 // app.use('/api/budget', budgetRoutes);
 

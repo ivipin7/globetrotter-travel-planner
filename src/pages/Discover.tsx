@@ -124,7 +124,7 @@ export default function Discover() {
             Discover Your Next <span className="text-gradient-primary">Destination</span>
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Explore {destinations.length}+ destinations worldwide. Find the perfect place for your next adventure.
+            Find the perfect place for your next adventure.
           </p>
         </div>
 
@@ -219,24 +219,15 @@ export default function Discover() {
           </div>
         )}
 
-        {/* Results Count */}
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-muted-foreground">
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {searchQuery ? 'Searching worldwide...' : 'Loading destinations...'}
-              </span>
-            ) : (
-              <>
-                <span className="text-foreground font-medium">{destinations.length}</span> destinations found
-                {searchSource === 'global' && (
-                  <span className="ml-2 text-xs text-blue-500">(via Global Search)</span>
-                )}
-              </>
-            )}
-          </p>
-        </div>
+        {/* Loading State Indicator */}
+        {loading && (
+          <div className="flex items-center justify-center mb-6">
+            <p className="text-muted-foreground flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {searchQuery ? 'Searching worldwide...' : 'Loading destinations...'}
+            </p>
+          </div>
+        )}
 
         {/* Error State */}
         {error && (

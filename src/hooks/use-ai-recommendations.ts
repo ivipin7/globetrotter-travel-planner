@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { aiApi, AIDestinationRecommendation, AITripAnalysis } from '@/lib/api';
 import {
   getDestinationRecommendations as getLocalRecommendations,
@@ -53,8 +53,19 @@ export function useAIRecommendations({
   const [isLoading, setIsLoading] = useState(false);
   const [aiPowered, setAiPowered] = useState(false);
   const [aiInsights, setAiInsights] = useState<AIDestinationRecommendation | null>(null);
+  
+  // Track last analyzed values to prevent duplicate API calls
+  const lastAnalyzedRef = useRef<string>('');
 
   const analyze = useCallback(async () => {
+    // Create a signature of current values to detect changes
+    const signature = `${destination}|${startDate?.getTime() || ''}|${endDate?.getTime() || ''}|${budget}|${plannedActivities}`;
+    
+    // Skip if we already analyzed these exact values
+    if (signature === lastAnalyzedRef.current) {
+      return;
+    }
+    
     if (!destination || destination.length < 2) {
       setRecommendations([]);
       setBudgetEstimate(null);
@@ -63,9 +74,12 @@ export function useAIRecommendations({
       setTravelTips([]);
       setAiPowered(false);
       setAiInsights(null);
+      lastAnalyzedRef.current = signature;
       return;
     }
 
+    // Update ref before starting analysis
+    lastAnalyzedRef.current = signature;
     setIsLoading(true);
 
     try {
@@ -170,7 +184,8 @@ export function useAIRecommendations({
     }
 
     setIsLoading(false);
-  }, [destination, startDate, endDate, budget, plannedActivities]);
+  // Use timestamps for stable dependencies instead of Date objects
+  }, [destination, startDate?.getTime(), endDate?.getTime(), budget, plannedActivities]);
 
   useEffect(() => {
     const debounceTimer = setTimeout(() => {

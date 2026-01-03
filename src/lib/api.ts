@@ -807,6 +807,192 @@ export const aiApi = {
     
     return response.json();
   },
+
+  // Get AI-generated destination page details (activities, travel info, tips)
+  async getDestinationDetails(cityName: string, country: string): Promise<{
+    success: boolean;
+    data: {
+      activities: {
+        name: string;
+        type: string;
+        duration: string;
+        price: string;
+        rating: number;
+        description: string;
+      }[];
+      travelInfo: {
+        gettingThere: string;
+        whereToStay: string;
+        foodDining: string;
+        mustSeeSpots: string;
+      };
+      tips: {
+        title: string;
+        description: string;
+      }[];
+    };
+    cached?: boolean;
+  }> {
+    const response = await fetch(
+      `${API_BASE_URL}/ai/destination-details/${encodeURIComponent(cityName)}/${encodeURIComponent(country)}`
+    );
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to get destination details');
+    }
+    
+    return response.json();
+  },
+};
+
+// Admin interfaces
+export interface AdminStats {
+  totalUsers: number;
+  activeUsers: number;
+  adminUsers: number;
+  newUsersThisWeek: number;
+  activeToday: number;
+}
+
+export interface AdminUser {
+  _id: string;
+  fullName: string;
+  email: string;
+  role: 'user' | 'admin';
+  isActive: boolean;
+  avatar?: string;
+  createdAt: string;
+  lastLogin?: string;
+}
+
+// Admin API functions
+export const adminApi = {
+  // Get platform stats
+  async getStats(): Promise<{ stats: AdminStats }> {
+    const response = await fetchWithAuth('/auth/admin/stats');
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch admin stats');
+    }
+    
+    return response.json();
+  },
+
+  // Get all users
+  async getUsers(page: number = 1, limit: number = 20): Promise<{
+    users: AdminUser[];
+    pagination: { page: number; limit: number; total: number; pages: number };
+  }> {
+    const response = await fetchWithAuth(`/auth/admin/users?page=${page}&limit=${limit}`);
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch users');
+    }
+    
+    return response.json();
+  },
+
+  // Toggle user status
+  async toggleUserStatus(userId: string): Promise<{ message: string; user: AdminUser }> {
+    const response = await fetchWithAuth(`/auth/admin/users/${userId}/toggle-status`, {
+      method: 'PUT',
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to toggle user status');
+    }
+    
+    return response.json();
+  },
+
+  // Update user role
+  async updateUserRole(userId: string, role: 'user' | 'admin'): Promise<{ message: string; user: AdminUser }> {
+    const response = await fetchWithAuth(`/auth/admin/users/${userId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update user role');
+    }
+    
+    return response.json();
+  },
+
+  // Get all trips (admin view)
+  async getAllTrips(page: number = 1, limit: number = 20): Promise<{
+    trips: Trip[];
+    pagination: { page: number; limit: number; total: number; pages: number };
+  }> {
+    const response = await fetchWithAuth(`/trips?page=${page}&limit=${limit}`);
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch trips');
+    }
+    
+    const data = await response.json();
+    return {
+      trips: data.data || [],
+      pagination: data.pagination || { page: 1, limit: 20, total: 0, pages: 0 }
+    };
+  },
+
+  // Get trending destinations
+  async getTrendingDestinations(): Promise<{ cities: City[] }> {
+    const response = await fetch(`${API_BASE_URL}/cities/trending`);
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to fetch trending destinations');
+    }
+    
+    return response.json();
+  },
+};
+
+// Upload API
+export const uploadApi = {
+  // Upload trip cover image
+  async uploadTripCover(file: File): Promise<{ success: boolean; data: { filename: string; url: string; size: number; mimetype: string } }> {
+    const token = getToken();
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`${API_BASE_URL}/upload/trip-cover`, {
+      method: 'POST',
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to upload image');
+    }
+
+    return response.json();
+  },
+
+  // Delete trip cover image
+  async deleteTripCover(filename: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetchWithAuth(`/upload/trip-cover/${filename}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to delete image');
+    }
+
+    return response.json();
+  },
 };
 
 export default tripApi;

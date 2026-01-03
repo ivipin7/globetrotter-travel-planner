@@ -4,13 +4,17 @@ import {
   analyzeTrip,
   generateItinerarySuggestions,
   getAIPackingSuggestions,
-  askAI
+  askAI,
+  getDestinationPageInfo
 } from '../controllers/ai.controller';
 
 const router = Router();
 
 // GET /api/ai/recommendations/:destination - Get AI recommendations for a destination
 router.get('/recommendations/:destination', getRecommendations);
+
+// GET /api/ai/destination-details/:cityName/:country - Get AI-generated activities, travel info, tips
+router.get('/destination-details/:cityName/:country', getDestinationPageInfo);
 
 // POST /api/ai/analyze-trip - Analyze trip feasibility
 router.post('/analyze-trip', analyzeTrip);

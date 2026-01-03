@@ -4,7 +4,8 @@ import {
   analyzeTripPlan,
   generateItinerary,
   getPackingSuggestions,
-  askTravelQuestion
+  askTravelQuestion,
+  generateDestinationPageDetails
 } from '../services/gemini.service';
 
 // Cache for destination recommendations (5 minute TTL)
@@ -197,6 +198,45 @@ export const askAI = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: 'Failed to answer question',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get AI-generated destination page details (activities, travel info, tips)
+// @route   GET /api/ai/destination-details/:cityName/:country
+// @access  Public
+export const getDestinationPageInfo = async (req: Request, res: Response) => {
+  try {
+    const { cityName, country } = req.params;
+    
+    if (!cityName || !country) {
+      return res.status(400).json({
+        success: false,
+        message: 'City name and country are required'
+      });
+    }
+
+    // Check cache first
+    const cacheKey = `dest_${cityName.toLowerCase()}_${country.toLowerCase()}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return res.json({ success: true, data: cached, cached: true });
+    }
+
+    const details = await generateDestinationPageDetails(cityName, country);
+    setCache(cacheKey, details);
+
+    res.json({
+      success: true,
+      data: details,
+      cached: false
+    });
+  } catch (error: any) {
+    console.error('Destination details error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get destination details',
       error: error.message
     });
   }
