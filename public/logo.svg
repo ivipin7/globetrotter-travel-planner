@@ -1,0 +1,30 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Globe circle -->
+  <circle cx="256" cy="256" r="220" fill="#4F9BF5" stroke="#2563EB" stroke-width="8"/>
+  
+  <!-- Latitude lines -->
+  <ellipse cx="256" cy="256" rx="220" ry="80" fill="none" stroke="white" stroke-width="4" opacity="0.4"/>
+  <ellipse cx="256" cy="256" rx="220" ry="140" fill="none" stroke="white" stroke-width="4" opacity="0.4"/>
+  
+  <!-- Longitude lines -->
+  <ellipse cx="256" cy="256" rx="80" ry="220" fill="none" stroke="white" stroke-width="4" opacity="0.4"/>
+  <ellipse cx="256" cy="256" rx="140" ry="220" fill="none" stroke="white" stroke-width="4" opacity="0.4"/>
+  
+  <!-- Vertical center line -->
+  <line x1="256" y1="36" x2="256" y2="476" stroke="white" stroke-width="4" opacity="0.4"/>
+  
+  <!-- Horizontal center line -->
+  <line x1="36" y1="256" x2="476" y2="256" stroke="white" stroke-width="4" opacity="0.4"/>
+  
+  <!-- Airplane icon -->
+  <g transform="translate(306, 180) rotate(45)">
+    <path d="M0 0 L40 0 L50 -15 L40 -10 L40 -25 L35 -30 L30 -25 L30 -10 L20 -15 L10 0 Z" fill="white"/>
+    <path d="M25 5 L25 20 L20 25 L30 25 L25 20 Z" fill="white"/>
+  </g>
+  
+  <!-- Pin marker -->
+  <g transform="translate(200, 300)">
+    <path d="M0 0 C0 -20 20 -30 20 -50 C20 -60 10 -70 0 -70 C-10 -70 -20 -60 -20 -50 C-20 -30 0 -20 0 0 Z" fill="#F59E42" stroke="#EA580C" stroke-width="3"/>
+    <circle cx="0" cy="-50" r="8" fill="white"/>
+  </g>
+</svg>
