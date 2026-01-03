@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, IndianRupee } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface BudgetCardProps {
   totalBudget: number;
@@ -19,15 +19,20 @@ export function BudgetCard({ totalBudget, spent, categories }: BudgetCardProps) 
   // Calculate the circumference and offset for the progress ring
   const radius = 70;
   const circumference = 2 * Math.PI * radius;
-  const offset = totalBudget > 0 
-    ? circumference - (Math.min(percentage, 100) / 100) * circumference 
-    : circumference; // Show empty ring when no budget
+  const offset =
+    totalBudget > 0
+      ? circumference - (Math.min(percentage, 100) / 100) * circumference
+      : circumference; // Show empty ring when no budget
 
   return (
     <div className="card-3d p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="font-semibold text-lg">Budget Overview</h3>
-        <div className={`flex items-center gap-1 text-sm ${isOverBudget ? "text-destructive" : "text-success"}`}>
+        <div
+          className={`flex items-center gap-1 text-sm ${
+            isOverBudget ? "text-destructive" : "text-success"
+          }`}
+        >
           {isOverBudget ? (
             <TrendingDown className="h-4 w-4" />
           ) : (
@@ -41,7 +46,6 @@ export function BudgetCard({ totalBudget, spent, categories }: BudgetCardProps) 
         {/* Progress Ring */}
         <div className="relative">
           <svg className="progress-ring w-40 h-40" viewBox="0 0 160 160">
-            {/* Background circle */}
             <circle
               cx="80"
               cy="80"
@@ -50,13 +54,16 @@ export function BudgetCard({ totalBudget, spent, categories }: BudgetCardProps) 
               stroke="hsl(var(--muted))"
               strokeWidth="12"
             />
-            {/* Progress circle */}
             <circle
               cx="80"
               cy="80"
               r={radius}
               fill="none"
-              stroke={isOverBudget ? "hsl(var(--destructive))" : "hsl(var(--primary))"}
+              stroke={
+                isOverBudget
+                  ? "hsl(var(--destructive))"
+                  : "hsl(var(--primary))"
+              }
               strokeWidth="12"
               strokeLinecap="round"
               strokeDasharray={circumference}
@@ -65,8 +72,12 @@ export function BudgetCard({ totalBudget, spent, categories }: BudgetCardProps) 
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-semibold">{totalBudget > 0 ? `${percentage}%` : '-'}</span>
-            <span className="text-xs text-muted-foreground">{totalBudget > 0 ? 'Used' : 'No budget'}</span>
+            <span className="text-3xl font-semibold">
+              {totalBudget > 0 ? `${percentage}%` : "-"}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {totalBudget > 0 ? "Used" : "No budget"}
+            </span>
           </div>
         </div>
 
@@ -74,16 +85,24 @@ export function BudgetCard({ totalBudget, spent, categories }: BudgetCardProps) 
         <div className="flex-1 space-y-4">
           <div>
             <p className="text-sm text-muted-foreground mb-1">Total Budget</p>
-            <p className="text-2xl font-semibold">₹{totalBudget.toLocaleString()}</p>
+            <p className="text-2xl font-semibold">
+              ₹{totalBudget.toLocaleString()}
+            </p>
           </div>
           <div className="flex gap-6">
             <div>
               <p className="text-sm text-muted-foreground mb-1">Spent</p>
-              <p className="text-lg font-medium text-foreground">₹{spent.toLocaleString()}</p>
+              <p className="text-lg font-medium text-foreground">
+                ₹{spent.toLocaleString()}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground mb-1">Remaining</p>
-              <p className={`text-lg font-medium ${isOverBudget ? "text-destructive" : "text-success"}`}>
+              <p
+                className={`text-lg font-medium ${
+                  isOverBudget ? "text-destructive" : "text-success"
+                }`}
+              >
                 ₹{Math.abs(remaining).toLocaleString()}
               </p>
             </div>
@@ -96,16 +115,26 @@ export function BudgetCard({ totalBudget, spent, categories }: BudgetCardProps) 
         <p className="text-sm font-medium mb-3">Spending by Category</p>
         <div className="space-y-3">
           {categories.map((category) => {
-            const catPercentage = Math.round((category.amount / spent) * 100) || 0;
+            const catPercentage =
+              spent > 0
+                ? Math.round((category.amount / spent) * 100)
+                : 0;
+
             return (
               <div key={category.name} className="flex items-center gap-3">
-                <div 
-                  className="w-3 h-3 rounded-full" 
+                <div
+                  className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: category.color }}
                 />
-                <span className="text-sm text-muted-foreground flex-1">{category.name}</span>
-                <span className="text-sm font-medium">₹{category.amount.toLocaleString()}</span>
-                <span className="text-xs text-muted-foreground w-10 text-right">{catPercentage}%</span>
+                <span className="text-sm text-muted-foreground flex-1">
+                  {category.name}
+                </span>
+                <span className="text-sm font-medium">
+                  ₹{category.amount.toLocaleString()}
+                </span>
+                <span className="text-xs text-muted-foreground w-10 text-right">
+                  {catPercentage}%
+                </span>
               </div>
             );
           })}
