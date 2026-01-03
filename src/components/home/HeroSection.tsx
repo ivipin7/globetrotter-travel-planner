@@ -91,7 +91,7 @@ export function HeroSection() {
             <p className="text-sm text-muted-foreground mb-4">Trusted by travelers worldwide</p>
             <div className="flex flex-wrap items-center justify-center gap-8">
               <div className="text-center">
-                <p className="text-2xl font-semibold text-foreground">50K+</p>
+                <p className="text-2xl font-semibold text-foreground">55K+</p>
                 <p className="text-xs text-muted-foreground">Trips Planned</p>
               </div>
               <div className="w-px h-10 bg-border hidden sm:block" />
