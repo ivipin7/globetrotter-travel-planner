@@ -96,7 +96,7 @@ export function HeroSection() {
               </div>
               <div className="w-px h-10 bg-border hidden sm:block" />
               <div className="text-center">
-                <p className="text-2xl font-semibold text-foreground">120+</p>
+                <p className="text-2xl font-semibold text-foreground">125+</p>
                 <p className="text-xs text-muted-foreground">Countries</p>
               </div>
               <div className="w-px h-10 bg-border hidden sm:block" />
