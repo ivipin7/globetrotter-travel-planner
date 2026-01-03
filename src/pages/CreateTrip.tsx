@@ -239,11 +239,53 @@ export default function CreateTrip() {
 
   // Handle applying optimized trip
   const handleApplyOptimization = useCallback((optimizedTrip: OptimizedTrip) => {
-    // In a real implementation, this would update the itinerary
-    console.log('Applying optimization:', optimizedTrip.name);
-    // For now, show success message
-    alert(`Applied "${optimizedTrip.name}" - Trip feasibility improved to ${optimizedTrip.possibility.percentage}%!`);
-  }, []);
+    console.log('Applying optimization:', optimizedTrip.name, optimizedTrip);
+    
+    const optimizedData = optimizedTrip.tripData;
+    const updates: Partial<TripFormData> = {};
+    const appliedChanges: string[] = [];
+    
+    // Apply budget changes
+    const currentBudget = parseFloat(tripData.budget || '0');
+    if (optimizedData.totalBudget && Math.abs(optimizedData.totalBudget - currentBudget) > 100) {
+      updates.budget = Math.round(optimizedData.totalBudget).toString();
+      appliedChanges.push(`Budget adjusted to ₹${Math.round(optimizedData.totalBudget).toLocaleString()}`);
+    }
+    
+    // Apply date/duration changes
+    if (optimizedData.totalDays && tripData.startDate) {
+      const currentDays = tripDays || 0;
+      if (optimizedData.totalDays !== currentDays) {
+        const startDate = new Date(tripData.startDate);
+        const newEndDate = new Date(startDate);
+        newEndDate.setDate(startDate.getDate() + optimizedData.totalDays - 1);
+        updates.endDate = newEndDate.toISOString().split('T')[0];
+        appliedChanges.push(`Trip duration changed to ${optimizedData.totalDays} days`);
+      }
+    }
+    
+    // Apply the updates if any
+    if (Object.keys(updates).length > 0) {
+      setTripData(prev => ({
+        ...prev,
+        ...updates
+      }));
+    }
+    
+    // Add the optimization change descriptions
+    optimizedTrip.changes.forEach(change => {
+      if (!appliedChanges.includes(change.description)) {
+        appliedChanges.push(change.description);
+      }
+    });
+    
+    // Show success toast/alert
+    const message = appliedChanges.length > 0 
+      ? `✅ Applied "${optimizedTrip.name}"!\n\nChanges:\n• ${appliedChanges.join('\n• ')}\n\nNew feasibility: ${optimizedTrip.possibility.percentage}%`
+      : `✅ "${optimizedTrip.name}" applied! This plan optimizes your itinerary schedule.\n\nFeasibility: ${optimizedTrip.possibility.percentage}%`;
+    
+    alert(message);
+  }, [tripData.budget, tripData.startDate, tripDays]);
 
   // Memoize date objects to prevent infinite re-renders
   const startDateObj = useMemo(() => 
